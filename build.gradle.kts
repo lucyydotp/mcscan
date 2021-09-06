@@ -15,6 +15,7 @@ repositories {
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
+    implementation("com.github.ajalt.clikt:clikt:3.2.0")
 }
 
 tasks.withType<KotlinCompile> {

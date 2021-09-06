@@ -1,8 +1,7 @@
 package net.lucypoulton.mcscan
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
-import java.util.*
+import java.util.UUID
 
 @Serializable
 data class ServerListPingResponse(

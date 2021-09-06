@@ -74,6 +74,7 @@ class Connection @Throws(ConnectException::class) constructor(private val addres
 
     fun reopenSocket() {
         socket = Socket(address, port.toInt())
+        socket.soTimeout = 500
     }
 
     @ExperimentalSerializationApi
@@ -85,24 +86,28 @@ class Connection @Throws(ConnectException::class) constructor(private val addres
         if (packetId != 0) throw ProtocolException("Expected response packet id 0 but got $packetId")
 
         val response: ServerListPingResponse = json.decodeFromString(readString(stream))
-        if (setProtocolVersion) protocolVersion = response.version.protocol
+        if (setProtocolVersion && response.version.protocol >= 0) protocolVersion = response.version.protocol
         return response
     }
 
     fun authMode(): AuthMode {
         val buffer = ByteArrayOutputStream()
-        writeString(buffer, "username")
+        writeString(buffer, "test")
         writePacket(0, buffer.toByteArray())
         val response = readPacket()
 
         return when (response.read()) {
             0 -> {
                 val error = readString(response)
-                val errorParsed = ChatSerialiser.deserializeElement(Json.parseToJsonElement(error))
-                return AuthMode.error(errorParsed)
+                val errorParsed: String = ChatSerialiser.deserializeElement(Json.parseToJsonElement(error))
+                return when {
+                    errorParsed.contains("Forge") -> AuthMode.FORGE
+                    errorParsed.contains("If you wish to use IP forwarding") -> AuthMode.IP_FORWARDING
+                    else -> AuthMode.error(errorParsed)
+                }
             }
             1 -> AuthMode.ONLINE
-            2 -> AuthMode.OFFLINE
+            2, 3 -> AuthMode.OFFLINE
             else -> AuthMode.error("Unknown")
         }
     }

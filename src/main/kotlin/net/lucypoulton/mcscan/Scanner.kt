@@ -1,10 +1,23 @@
 package net.lucypoulton.mcscan
 
+import java.util.*
+
 data class ScanResult(val addr: String, val success: Boolean, val targets: List<ScanTarget>)
 
-data class ScanTarget(val port: UShort, val motd: String?, val authMode: AuthMode, val playerCount: Int )
+data class ScanTarget(val port: UShort, val authMode: AuthMode, val status: ServerListPingResponse?)
 
-data class AuthMode(val reason : String, val success: Boolean) {
+open class AuthMode(val reason: String, val success: Boolean) {
+
+    override fun hashCode() = Objects.hash(reason, success)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as AuthMode
+        if (reason != other.reason || success != other.success) return false
+        return true
+    }
+
     companion object {
         val ONLINE = AuthMode("Online", true)
         val OFFLINE = AuthMode("Offline", true)
@@ -14,13 +27,15 @@ data class AuthMode(val reason : String, val success: Boolean) {
     }
 }
 
-class Scanner(val address: String) {
+class NetworkErrorAuth(ex: Exception) : AuthMode(ex.localizedMessage, false)
 
-    private var result : ScanResult? = null
+class Scanner(val address: String, val portRange: IntRange) {
+
+    private var result: ScanResult? = null
 
     private fun scanPorts(): List<UShort> {
         // TODO actually scan
-        return listOf(25565.toUShort())
+        return portRange.toList().map { i -> i.toUShort() }
     }
 
     private fun testPort(port: UShort): ScanTarget {
@@ -34,17 +49,26 @@ class Scanner(val address: String) {
             conn.handshake(Connection.State.LOGIN)
             val authMode = conn.authMode()
 
-            return ScanTarget(port, response.description, authMode, response.players.online)
+            return ScanTarget(port, authMode, response)
         } catch (e: Exception) {
-            return ScanTarget(port, null, AuthMode.error(e.localizedMessage), 0)
+            return ScanTarget(
+                port, NetworkErrorAuth(e), null
+            )
         }
     }
 
-    fun scan(force: Boolean = false): ScanResult {
+    fun scan(force: Boolean = false, onDiscover: ((ScanTarget) -> Unit)? = null): ScanResult {
         if (result != null && !force) return result as ScanResult
 
         val ports = scanPorts()
+        val results: MutableList<ScanTarget> = mutableListOf()
 
-        return ScanResult(address, false, ports.map { p -> testPort(p) })
+        ports.forEach { p ->
+            val result = testPort(p)
+            results.add(result)
+            onDiscover?.invoke(result)
+        }
+
+        return ScanResult(address, false, results)
     }
 }
