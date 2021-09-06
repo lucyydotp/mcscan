@@ -1,13 +1,16 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     kotlin("jvm") version "1.5.30"
     kotlin("plugin.serialization") version "1.5.30"
-    application
+    java
+    id("com.github.johnrengelman.shadow") version "7.0.0"
 }
 
 group = "net.lucypoulton"
 version = "1.0-SNAPSHOT"
+
 
 repositories {
     mavenCentral()
@@ -16,12 +19,24 @@ repositories {
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.2")
     implementation("com.github.ajalt.clikt:clikt:3.2.0")
+    implementation("de.m3y.kformat:kformat:0.8")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "13"
+tasks {
+    withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "13"
+    }
+
+    withType<ShadowJar> {
+        archiveClassifier.set("")
+    }
+
+    jar {
+        manifest {
+            attributes("Main-Class" to "net.lucypoulton.mcscan.MainKt")
+        }
+        archiveClassifier.set("nodeps")
+    }
 }
 
-application {
-    mainClass.set("net.lucypoulton.mcscan.MainKt")
-}
+tasks["build"].dependsOn(tasks["shadowJar"])
