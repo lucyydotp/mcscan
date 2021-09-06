@@ -8,6 +8,13 @@ import de.m3y.kformat.Table
 import de.m3y.kformat.table
 import java.net.SocketException
 
+fun String.limitLength(length: Int): String {
+    if (this.length < kotlin.math.max(3, length)) {
+        return this
+    }
+    return substring(0..length - 3) + "..."
+}
+
 class ScanCommand : CliktCommand() {
 
     val target: String by option("-t", "--target", help = "Target IP").required()
@@ -47,7 +54,12 @@ class ScanCommand : CliktCommand() {
                 for (target in results.targets) {
                     if (!verboseFlag && target.authMode is NetworkErrorAuth) continue
                     row(target.port.toString(),
-                        target.status?.description?.replace("\n", "\\n") ?: "null",
+
+                        target.status?.description?.
+                        replace("\n", "\\n")?.
+                        replace(Regex("\u00a7."), "")?.
+                        limitLength(100) ?: "null",
+
                         target.status?.players?.online.toString(),
                         target.status?.version?.name ?: "Unknown",
                         target.authMode.reason
