@@ -1,12 +1,28 @@
+/*
+ * Copyright © 2021 Lucy Poulton
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package net.lucypoulton.mcscan
 
-import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.*
-import com.github.ajalt.clikt.parameters.types.int
-import com.github.ajalt.clikt.parameters.types.restrictTo
-import de.m3y.kformat.Table
-import de.m3y.kformat.table
-import java.net.SocketException
+import net.lucypoulton.mcscan.command.McscanCommand
 
 fun String.limitLength(length: Int): String {
     if (this.length < kotlin.math.max(3, length)) {
@@ -15,66 +31,4 @@ fun String.limitLength(length: Int): String {
     return substring(0..length - 3) + "..."
 }
 
-class ScanCommand : CliktCommand() {
-
-    val target: String by option("-t", "--target", help = "Target IP").required()
-
-    val portSingle: Int? by option("-p", "--port", help = "Scan a single port")
-        .int().restrictTo(0..65535)
-
-    val portRange: Pair<Int, Int> by option("-r", "--range", help = "Scan a range")
-        .int().restrictTo(0..65535).pair().default(Pair(25565, 25700))
-
-    val verboseFlag: Boolean by option("-v", "--verbose", help = "Verbose output").flag()
-
-    override fun run() {
-        val range: IntRange
-        if (portSingle != null) {
-            range = portSingle!!..portSingle!!
-            println("Scanning target $target, single port $portSingle")
-
-        } else {
-            range = portRange.first..portRange.second
-            println("Scanning target $target, ports ${portRange.first}-${portRange.second}")
-        }
-        try {
-             val results = Scanner(target, range).scan { result ->
-                 if (!verboseFlag && result.authMode is NetworkErrorAuth) return@scan
-                print(result.port.toString() + ": ")
-                if (result.status?.description != null) {
-                    print("MOTD: ${result.status.description} | ${result.status.players.online}/${result.status.players.max} players | ")
-                }
-                print(if (result.authMode.success) "Auth mode" else "Error:")
-                println(" ${result.authMode.reason}")
-            }
-
-            println(table {
-                header("Port", "MOTD", "Players", "Version", "Auth")
-
-                for (target in results.targets) {
-                    if (!verboseFlag && target.authMode is NetworkErrorAuth) continue
-                    row(target.port.toString(),
-
-                        target.status?.description?.
-                        replace("\n", "\\n")?.
-                        replace(Regex("\u00a7."), "")?.
-                        limitLength(100) ?: "null",
-
-                        target.status?.players?.online.toString(),
-                        target.status?.version?.name ?: "Unknown",
-                        target.authMode.reason
-                    )
-                }
-
-                hints {
-                    borderStyle = Table.BorderStyle.SINGLE_LINE
-                }
-            }.render())
-        }
-        catch (ex : SocketException) {
-            println("ERROR: ${ex.localizedMessage}")
-        }
-    }
-}
-
-fun main(args: Array<String>) = ScanCommand().main(args)
+fun main(args: Array<String>) = McscanCommand().main(args)

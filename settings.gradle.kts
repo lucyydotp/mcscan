@@ -1,3 +1,3 @@
 
-rootProject.name = "mcscan-kt"
+rootProject.name = "mcscan"
 

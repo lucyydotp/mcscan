@@ -20,28 +20,23 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package net.lucypoulton.mcscan
+package net.lucypoulton.mcscan.serialiser
 
-import kotlinx.serialization.Serializable
-import net.lucypoulton.mcscan.serialiser.ChatSerialiser
-import net.lucypoulton.mcscan.serialiser.UUIDSerializer
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.util.UUID
 
-@Serializable
-data class ServerListPingResponse(
-    val version: ServerVersion,
-    @Serializable(with = ChatSerialiser::class) val description: String,
-    val favicon: String? = null,
-    val players: PlayerCount
-) {
+object UUIDSerializer : KSerializer<UUID> {
+    override val descriptor = PrimitiveSerialDescriptor("UUID", PrimitiveKind.STRING)
 
-    @Serializable
-    data class ServerVersion(val name: String, val protocol: Int)
+    override fun deserialize(decoder: Decoder): UUID {
+        return UUID.fromString(decoder.decodeString())
+    }
 
-    @Serializable
-    data class PlayerCount(val max: Int, val online: Int, val sample: Array<Player> = emptyArray()) {
-        @Serializable
-        data class Player(val name: String, @Serializable(with = UUIDSerializer::class) val id: UUID)
+    override fun serialize(encoder: Encoder, value: UUID) {
+        encoder.encodeString(value.toString())
     }
 }
-

@@ -22,9 +22,14 @@ dependencies {
     implementation("de.m3y.kformat:kformat:0.8")
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+}
+
 tasks {
+
     withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = "13"
+        kotlinOptions.jvmTarget = "11"
     }
 
     withType<ShadowJar> {
